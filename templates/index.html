@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>☀️ UV Forecast</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background-color: #111;
+            color: white;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.6rem;
+        }
+        form {
+            text-align: center;
+            margin: 20px 0;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 70%;
+            max-width: 300px;
+            border-radius: 8px;
+            border: none;
+        }
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            margin-left: 10px;
+        }
+        .forecast {
+            background: #222;
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .chart {
+            text-align: center;
+        }
+        img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>☀️ UV Forecast App</h1>
+
+    <form method="POST">
+        <input type="text" name="city" placeholder="Enter city name" required>
+        <button type="submit">Get Forecast</button>
+    </form>
+
+    {% if forecast %}
+    <div class="forecast">
+        {% for hour, uv, cloud, adj in forecast %}
+            <div>{{ hour }} — UV: {{ uv }}  Cloud: {{ cloud }}%  Adjusted: {{ adj }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if chart %}
+    <div class="chart">
+        <img src="data:image/png;base64,{{ chart }}" alt="UV Forecast Chart">
+    </div>
+    {% endif %}
+</body>
+</html>
