@@ -1,10 +1,9 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request
 import requests
 import io
 import matplotlib.pyplot as plt
 import numpy as np
 import base64
-from datetime import datetime
 
 app = Flask(__name__)
 
@@ -110,22 +109,38 @@ def organize_forecast_data(forecast):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    city = request.form.get('city')
+    city = request.values.get('city')
     chart = None
     forecast_text = None
+    day_index = int(request.args.get("day", 0))
+    max_index = 0
+
     if city:
         try:
             lat, lon, name, country = get_coordinates(city)
             forecast = get_forecast(lat, lon)
             forecast_data = organize_forecast_data(forecast)
-            date = sorted(forecast_data.keys())[0]
+            days = sorted(forecast_data.keys())
+            max_index = len(days) - 1
+
+            # Clamp index
+            day_index = max(0, min(day_index, max_index))
+            date = days[day_index]
             hourly_data = forecast_data[date]["hourly"]
             chart = generate_uv_chart(date, hourly_data)
             forecast_text = [(hour, uv, cloud, adj) for hour, uv, cloud, adj in hourly_data]
         except Exception as e:
             forecast_text = [("Error", str(e), "", "")]
 
-    return render_template('index.html', chart=chart, forecast=forecast_text)
+    return render_template(
+        'index.html',
+        chart=chart,
+        forecast=forecast_text,
+        city=city or "",
+        day_index=day_index,
+        max_index=max_index,
+        show_nav=(city is not None)
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

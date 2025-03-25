@@ -28,13 +28,15 @@
             border-radius: 8px;
             border: none;
         }
-        button {
+        button, .nav-button {
             padding: 10px 20px;
             border-radius: 8px;
             background-color: #007aff;
             color: white;
             border: none;
-            margin-left: 10px;
+            margin: 10px 5px;
+            cursor: pointer;
+            text-decoration: none;
         }
         .forecast {
             background: #222;
@@ -52,13 +54,17 @@
             border-radius: 10px;
             box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
         }
+        .nav {
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>☀️ UV Forecast App</h1>
 
     <form method="POST">
-        <input type="text" name="city" placeholder="Enter city name" required>
+        <input type="text" name="city" placeholder="Enter city name" required value="{{ city }}">
         <button type="submit">Get Forecast</button>
     </form>
 
@@ -73,6 +79,17 @@
     {% if chart %}
     <div class="chart">
         <img src="data:image/png;base64,{{ chart }}" alt="UV Forecast Chart">
+    </div>
+    {% endif %}
+
+    {% if show_nav %}
+    <div class="nav">
+        {% if day_index > 0 %}
+            <a href="/?city={{ city }}&day={{ day_index - 1 }}" class="nav-button">← Previous Day</a>
+        {% endif %}
+        {% if day_index < max_index %}
+            <a href="/?city={{ city }}&day={{ day_index + 1 }}" class="nav-button">Next Day →</a>
+        {% endif %}
     </div>
     {% endif %}
 </body>
