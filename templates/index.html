@@ -21,6 +21,10 @@
             text-align: center;
             margin: 20px 0;
         }
+        .autocomplete {
+            position: relative;
+            display: inline-block;
+        }
         input[type="text"] {
             padding: 10px;
             width: 70%;
@@ -37,6 +41,23 @@
             margin: 10px 5px;
             cursor: pointer;
             text-decoration: none;
+        }
+        .autocomplete-items {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #222;
+            border: 1px solid #444;
+            border-radius: 0 0 8px 8px;
+            z-index: 99;
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .autocomplete-item:hover {
+            background-color: #333;
         }
         .forecast {
             background: #222;
@@ -65,8 +86,11 @@
 <body>
     <h1>☀️ UV Forecast App</h1>
 
-    <form method="POST">
-        <input type="text" name="city" placeholder="Enter city name" required value="{{ city }}">
+    <form method="POST" autocomplete="off">
+        <div class="autocomplete">
+            <input type="text" name="city" id="city-input" placeholder="Enter city name" required value="{{ city }}">
+            <div id="suggestions" class="autocomplete-items"></div>
+        </div>
         <button type="submit">Get Forecast</button>
     </form>
 
@@ -94,5 +118,36 @@
         {% endif %}
     </div>
     {% endif %}
+
+    <script>
+        const input = document.getElementById("city-input");
+        const suggestionBox = document.getElementById("suggestions");
+
+        input.addEventListener("input", async () => {
+            const query = input.value;
+            if (!query) return suggestionBox.innerHTML = "";
+
+            const res = await fetch(`/suggest?q=${encodeURIComponent(query)}`);
+            const suggestions = await res.json();
+
+            suggestionBox.innerHTML = "";
+            suggestions.forEach(item => {
+                const div = document.createElement("div");
+                div.textContent = item;
+                div.className = "autocomplete-item";
+                div.onclick = () => {
+                    input.value = item;
+                    suggestionBox.innerHTML = "";
+                };
+                suggestionBox.appendChild(div);
+            });
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".autocomplete")) {
+                suggestionBox.innerHTML = "";
+            }
+        });
+    </script>
 </body>
 </html>

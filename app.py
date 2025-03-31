@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import requests
 import io
 import matplotlib.pyplot as plt
@@ -15,6 +15,12 @@ def get_coordinates(city_name):
         raise ValueError("City not found")
     result = data["results"][0]
     return result["latitude"], result["longitude"], result["name"], result["country"]
+
+def get_suggestions(query):
+    url = f"https://geocoding-api.open-meteo.com/v1/search?name={query}&count=5"
+    response = requests.get(url)
+    results = response.json().get("results", [])
+    return [f"{item['name']}, {item['country']} ({item['latitude']}, {item['longitude']})" for item in results]
 
 def get_forecast(lat, lon):
     url = (
@@ -107,6 +113,12 @@ def organize_forecast_data(forecast):
 
     return forecast_data_by_day
 
+@app.route('/suggest')
+def suggest():
+    query = request.args.get('q', '')
+    suggestions = get_suggestions(query) if query else []
+    return jsonify(suggestions)
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     city = request.values.get('city')
@@ -117,13 +129,13 @@ def index():
 
     if city:
         try:
-            lat, lon, name, country = get_coordinates(city)
+            name = city.split("(")[0].strip()
+            coords = city.split("(")[-1].replace(")", "").split(",")
+            lat, lon = float(coords[0]), float(coords[1])
             forecast = get_forecast(lat, lon)
             forecast_data = organize_forecast_data(forecast)
             days = sorted(forecast_data.keys())
             max_index = len(days) - 1
-
-            # Clamp index
             day_index = max(0, min(day_index, max_index))
             date = days[day_index]
             hourly_data = forecast_data[date]["hourly"]
