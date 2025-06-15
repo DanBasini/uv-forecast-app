@@ -94,6 +94,10 @@
         <button type="submit">Get Forecast</button>
     </form>
 
+    <div style="text-align: center; margin-top: 10px;">
+        <a href="/uva-tanning-test" class="nav-button">🌤️ UVA Tanning Score</a>
+    </div>
+
     {% if forecast %}
     <div class="forecast">
         {% for hour, uv, cloud, adj in forecast %}

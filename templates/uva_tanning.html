@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time UVA Tanning Index</title>
+  <style>
+  .autocomplete {
+    position: relative;
+    display: inline-block;
+  }
+  .autocomplete-items {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 0 0 8px 8px;
+    z-index: 99;
+  }
+  .autocomplete-item {
+    padding: 10px;
+    cursor: pointer;
+  }
+  .autocomplete-item:hover {
+    background-color: #333;
+  }
+    body { background: #111; color: #fff; font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    input, button { margin: 10px 0; padding: 8px; border-radius: 6px; }
+    .box { background: #222; padding: 15px; border-radius: 8px; margin-top: 20px; }
+    a { color: #66f; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>📸 UVA Tanning Index Test</h1>
+
+  <form method="POST" action="/uva-tanning-test" enctype="multipart/form-data">
+  <div class="autocomplete">
+    <input type="text" name="city" id="city-input" placeholder="Enter city name" required value="{{ result.city if result else '' }}">
+    <div id="suggestions" class="autocomplete-items"></div>
+  </div>
+  <br>
+  <label>Upload a photo of the sky:</label><br>
+  <input type="file" name="sky_image" accept="image/*" required><br>
+  <button type="submit">Estimate UVA</button>
+</form>
+
+  {% if result %}
+    <div class="box">
+      {% if result.error %}
+        <p>Error: {{ result.error }}</p>
+      {% else %}
+        <p><strong>☀️ UVI (Clear Sky):</strong> {{ result.uvi }}</p>
+        <p><strong>🌞 UVA Index (Clear Sky):</strong> {{ result.uva_clear }}</p>
+        <p><strong>☁️ Cloud Coverage Estimate:</strong> {{ result.cloud_fraction }}%</p>
+        <p><strong>🎯 Final UVA Tanning Score:</strong> {{ result.uva_adj }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <p><a href="/">← Back to Forecast</a></p>
+
+<script>
+  const input = document.getElementById("city-input");
+  const suggestionBox = document.getElementById("suggestions");
+
+  input.addEventListener("input", async () => {
+    const query = input.value;
+    if (!query) return suggestionBox.innerHTML = "";
+
+    const res = await fetch(`/suggest?q=${encodeURIComponent(query)}`);
+    const suggestions = await res.json();
+
+    suggestionBox.innerHTML = "";
+    suggestions.forEach(item => {
+      const div = document.createElement("div");
+      div.textContent = item;
+      div.className = "autocomplete-item";
+      div.onclick = () => {
+        input.value = item;
+        suggestionBox.innerHTML = "";
+      };
+      suggestionBox.appendChild(div);
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".autocomplete")) {
+      suggestionBox.innerHTML = "";
+    }
+  });
+</script>
+
+</body>
+</html>

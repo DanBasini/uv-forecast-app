@@ -4,6 +4,9 @@ import io
 import matplotlib.pyplot as plt
 import numpy as np
 import base64
+from PIL import Image  # Required for photo-based UV
+from datetime import datetime
+import pytz  # make sure it's in requirements.txt
 
 app = Flask(__name__)
 
@@ -154,5 +157,63 @@ def index():
         show_nav=(city is not None)
     )
 
+@app.route('/uva-tanning-test', methods=['GET', 'POST'])
+def uva_tanning_test():
+    result = None
+    if request.method == 'POST':
+        try:
+            file = request.files.get('sky_image')
+            city = request.form.get('city')
+            coords = city.split("(")[-1].replace(")", "").split(",")
+            lat, lon = float(coords[0]), float(coords[1])
+
+            # Estimate cloud coverage from image
+            img = Image.open(file.stream).convert("RGB")
+            arr = np.array(img)
+            avg_red = np.mean(arr[:, :, 0])
+            avg_blue = np.mean(arr[:, :, 2])
+            rb_ratio = avg_red / (avg_blue + 1e-5)
+            cloud_fraction = min(1.0, max(0.0, (rb_ratio - 0.6) / 1.2))  # heuristic
+
+            # Fetch clear-sky UVI data from Open-Meteo
+            api_url = (
+                f"https://api.open-meteo.com/v1/forecast?"
+                f"latitude={lat}&longitude={lon}"
+                f"&hourly=uv_index_clear_sky&timezone=auto"
+            )
+            response = requests.get(api_url).json()
+
+            times = response["hourly"]["time"]
+            uvi_values = response["hourly"]["uv_index_clear_sky"]
+
+            # Determine current local hour based on forecast timezone
+            local_now = datetime.now().astimezone()
+            now_str = local_now.strftime("%Y-%m-%dT%H:00")
+
+            # Match the current hour to the forecast
+            if now_str in times:
+                idx = times.index(now_str)
+                uvi = uvi_values[idx]
+            else:
+                uvi = 0.0  # fallback
+
+            # Calculate UVA index
+            uva_index_clear = uvi * 0.95
+            transmittance = 1 - 0.55 * cloud_fraction
+            uva_index_adj = round(uva_index_clear * transmittance, 2)
+
+            result = {
+                "uvi": round(uvi, 2),
+                "uva_clear": round(uva_index_clear, 2),
+                "cloud_fraction": round(cloud_fraction * 100),
+                "uva_adj": uva_index_adj,
+                "city": city
+            }
+
+        except Exception as e:
+            result = {"error": str(e)}
+    return render_template("uva_tanning.html", result=result)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
+

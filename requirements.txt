@@ -1,5 +1,7 @@
 Flask
 requests
 matplotlib
+pillow
 numpy
 gunicorn
+pytz

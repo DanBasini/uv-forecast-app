@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📸 UVA Estimation</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      background-color: #111;
+      color: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+    }
+    form {
+      text-align: center;
+      margin-top: 20px;
+    }
+    input[type="file"] {
+      background-color: #222;
+      color: white;
+      border: 1px solid #555;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      border-radius: 8px;
+      background-color: #007aff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .result-box {
+      background: #222;
+      border-radius: 10px;
+      padding: 15px;
+      font-family: monospace;
+      margin-top: 20px;
+      font-size: 0.95rem;
+    }
+    a {
+      color: #4faaff;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 20px;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>📸 UVA Estimation via Camera</h1>
+
+  <form method="POST" action="/uv-photo" enctype="multipart/form-data">
+    <input type="file" name="photo" accept="image/*" required><br>
+    <input type="hidden" name="city" value="{{ city or '' }}">
+    <button type="submit">Estimate UVA</button>
+  </form>
+
+  {% if uv is not none %}
+    <div class="result-box">
+      {% if uv.error %}
+        <strong>Error:</strong> {{ uv.error }}
+      {% else %}
+        ☁️ Estimated Cloud Cover: {{ uv.cloud }}%<br>
+        🔆 Benchmark UVI: {{ uv.original }}<br>
+        🟣 Estimated UVA Index: {{ uv.uva }}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <a href="/">← Back to UV Forecast</a>
+</body>
+</html>
