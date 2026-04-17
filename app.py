@@ -1,3 +1,8 @@
+import time
+
+suggestion_cache = {}
+CACHE_TTL = 3600  # 1 hour
+
 from flask import Flask, render_template, request, jsonify
 import requests
 import io
@@ -12,6 +17,9 @@ import pytz  # make sure it's in requirements.txt
 
 app = Flask(__name__)
 
+forecast_cache = {}
+FORECAST_CACHE_TTL = 900  # 15 minutes
+
 def get_coordinates(city_name):
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1"
     response = requests.get(url)
@@ -22,6 +30,14 @@ def get_coordinates(city_name):
     return result["latitude"], result["longitude"], result["name"], result["country"]
 
 def get_suggestions(query):
+    query_key = query.strip().lower()
+    now = time.time()
+
+    if query_key in suggestion_cache:
+        cached_time, cached_value = suggestion_cache[query_key]
+        if now - cached_time < CACHE_TTL:
+            return cached_value
+
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={query}&count=5"
     response = requests.get(url, timeout=10)
     results = response.json().get("results", [])
@@ -42,9 +58,18 @@ def get_suggestions(query):
         label = ", ".join(label_parts)
         suggestions.append(f"{label} ({lat}, {lon})")
 
+    suggestion_cache[query_key] = (now, suggestions)
     return suggestions
 
 def get_forecast(lat, lon):
+    key = f"{round(lat, 4)},{round(lon, 4)}"
+    now = time.time()
+
+    if key in forecast_cache:
+        cached_time, cached_value = forecast_cache[key]
+        if now - cached_time < FORECAST_CACHE_TTL:
+            return cached_value
+
     url = (
         f"https://api.open-meteo.com/v1/forecast?"
         f"latitude={lat}&longitude={lon}"
@@ -52,12 +77,14 @@ def get_forecast(lat, lon):
         f"&daily=uv_index_max,cloud_cover_mean"
         f"&timezone=auto"
     )
+
     response = requests.get(url, timeout=15)
     data = response.json()
 
     if "hourly" not in data or "daily" not in data:
         raise ValueError(data.get("reason") or data.get("error") or "Forecast data unavailable")
 
+    forecast_cache[key] = (now, data)
     return data
 
 def adjust_uv_for_clouds(uv_index, cloud_coverage):
@@ -170,7 +197,10 @@ def index():
             chart = generate_uv_chart(date, hourly_data)
             forecast_text = [(hour, uv, cloud, adj) for hour, uv, cloud, adj in hourly_data]
         except Exception as e:
-            forecast_text = [("Error", str(e), "", "")]
+            message = str(e)
+            if "request limit exceeded" in message.lower():
+                message = "Open-Meteo is rate-limiting requests right now. Please try again later."
+            forecast_text = [("Error", message, "", "")]
 
     return render_template(
         'index.html',
