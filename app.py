@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import io
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import base64
@@ -21,19 +23,42 @@ def get_coordinates(city_name):
 
 def get_suggestions(query):
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={query}&count=5"
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     results = response.json().get("results", [])
-    return [f"{item['name']}, {item['country']} ({item['latitude']}, {item['longitude']})" for item in results]
+
+    suggestions = []
+    for item in results:
+        name = item.get("name", "Unknown")
+        country = item.get("country") or item.get("country_code") or "Unknown"
+        admin1 = item.get("admin1")
+        lat = item.get("latitude")
+        lon = item.get("longitude")
+
+        label_parts = [name]
+        if admin1:
+            label_parts.append(admin1)
+        label_parts.append(country)
+
+        label = ", ".join(label_parts)
+        suggestions.append(f"{label} ({lat}, {lon})")
+
+    return suggestions
 
 def get_forecast(lat, lon):
     url = (
         f"https://api.open-meteo.com/v1/forecast?"
         f"latitude={lat}&longitude={lon}"
-        f"&hourly=uv_index,cloudcover&daily=uv_index_max,cloudcover_mean"
+        f"&hourly=uv_index,cloud_cover"
+        f"&daily=uv_index_max,cloud_cover_mean"
         f"&timezone=auto"
     )
-    response = requests.get(url)
-    return response.json()
+    response = requests.get(url, timeout=15)
+    data = response.json()
+
+    if "hourly" not in data or "daily" not in data:
+        raise ValueError(data.get("reason") or data.get("error") or "Forecast data unavailable")
+
+    return data
 
 def adjust_uv_for_clouds(uv_index, cloud_coverage):
     if cloud_coverage < 20:
@@ -88,11 +113,11 @@ def organize_forecast_data(forecast):
     forecast_data_by_day = {}
     hourly_times = forecast["hourly"]["time"]
     uv_hourly = forecast["hourly"]["uv_index"]
-    cloud_hourly = forecast["hourly"]["cloudcover"]
+    cloud_hourly = forecast["hourly"]["cloud_cover"]
 
     daily_times = forecast["daily"]["time"]
     uv_daily = forecast["daily"]["uv_index_max"]
-    cloud_daily = forecast["daily"]["cloudcover_mean"]
+    cloud_daily = forecast["daily"]["cloud_cover_mean"]
 
     for i in range(len(hourly_times)):
         dt = hourly_times[i]

@@ -1,0 +1,4 @@
+killall OneDrive
+killall fileproviderd
+killall fileproviderctl
+killall bird
