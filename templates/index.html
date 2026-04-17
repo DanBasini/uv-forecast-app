@@ -126,44 +126,7 @@
     <script>
         const input = document.getElementById("city-input");
         const suggestionBox = document.getElementById("suggestions");
-        let debounceTimer;
-
-        input.addEventListener("input", () => {
-            clearTimeout(debounceTimer);
-
-            const query = input.value.trim();
-            if (!query || query.length < 2) {
-                suggestionBox.innerHTML = "";
-                return;
-            }
-
-            debounceTimer = setTimeout(async () => {
-                try {
-                    const res = await fetch(`/suggest?q=${encodeURIComponent(query)}`);
-                    const suggestions = await res.json();
-
-                    suggestionBox.innerHTML = "";
-                    suggestions.forEach(item => {
-                        const div = document.createElement("div");
-                        div.textContent = item;
-                        div.className = "autocomplete-item";
-                        div.onclick = () => {
-                            input.value = item;
-                            suggestionBox.innerHTML = "";
-                        };
-                        suggestionBox.appendChild(div);
-                    });
-                } catch (err) {
-                    console.error("Suggestion fetch failed:", err);
-                }
-            }, 400);
-        });
-
-        document.addEventListener("click", (e) => {
-            if (!e.target.closest(".autocomplete")) {
-                suggestionBox.innerHTML = "";
-            }
-        });
+        suggestionBox.innerHTML = "";
     </script>
 </body>
 </html>
